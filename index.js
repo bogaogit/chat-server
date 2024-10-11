@@ -14,48 +14,53 @@ const io = new Server(server, {
 
 app.use(cors());
 
-app.get("/", (req, res) => {
-    res.send("Hello World");
-});
 
-const emailToSocket = new Map();
-const socketToEmail = new Map();
+peers = {}
 
-io.on("connection", (socket) => {
-    console.log(`Socket Connected: ${socket.id}`);
+io.on('connect', (socket) => {
+    console.log('a client is connected')
 
-    socket.on("room:join", data => {
-        const { email, room } = data;
-        emailToSocket.set(email, socket.id);
-        socketToEmail.set(socket.id, email);
 
-        socket.join(room);
-        io.to(room).emit("user:joined", { email, id: socket.id });
+    // Initiate the connection process as soon as the client connects
 
-        // emits a 'room:joined' event back to the client
-        // that just joined the room.
-        io.to(socket.id).emit("room:join", data);
-    });
+    peers[socket.id] = socket
 
-    socket.on("user:call", ({ to, offer }) => {
-        io.to(to).emit("incoming:call", { from: socket.id, offer });
-    });
+    // Asking all other clients to setup the peer connection receiver
+    for(let id in peers) {
+        if(id === socket.id) continue
+        console.log('sending init receive to ' + socket.id)
+        peers[id].emit('initReceive', socket.id)
+    }
 
-    socket.on("call:accepted", ({ to, ans }) => {
-        io.to(to).emit("call:accepted", { from: socket.id, ans });
-    });
+    /**
+     * relay a peerconnection signal to a specific socket
+     */
+    socket.on('signal', data => {
+        console.log('sending signal from ' + socket.id + ' to ', data)
+        if(!peers[data.socket_id])return
+        peers[data.socket_id].emit('signal', {
+            socket_id: socket.id,
+            signal: data.signal
+        })
+    })
 
-    socket.on("peer:nego:needed", ({ to, offer }) => {
-        io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
-    });
+    /**
+     * remove the disconnected peer connection from all other connected clients
+     */
+    socket.on('disconnect', () => {
+        console.log('socket disconnected ' + socket.id)
+        socket.broadcast.emit('removePeer', socket.id)
+        delete peers[socket.id]
+    })
 
-    socket.on("peer:nego:done", ({ to, ans }) => {
-        io.to(to).emit("peer:nego:final", { from: socket.id, ans });
-    });
-
-    socket.on("call:initiated", ({ to }) => {
-        io.to(to).emit("call:initiated", { from: socket.id });
-    });
+    /**
+     * Send message to client to initiate a connection
+     * The sender has already setup a peer connection receiver
+     */
+    socket.on('initSend', init_socket_id => {
+        console.log('INIT SEND by ' + socket.id + ' for ' + init_socket_id)
+        peers[init_socket_id].emit('initSend', socket.id)
+    })
 })
 
 server.listen(process.env.PORT, () => console.log(`Server has started.`));
