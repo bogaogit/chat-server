@@ -52,10 +52,6 @@ io.on("connection", (socket) => {
     socket.on("peer:nego:done", ({ to, ans }) => {
         io.to(to).emit("peer:nego:final", { from: socket.id, ans });
     });
-
-    socket.on("call:initiated", ({ to }) => {
-        io.to(to).emit("call:initiated", { from: socket.id });
-    });
 })
 
 server.listen(process.env.PORT, () => console.log(`Server has started.`));
