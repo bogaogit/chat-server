@@ -32,7 +32,7 @@ io.on("connection", (socket) => {
         socket.join(room);
         io.to(room).emit("user:joined", { email, id: socket.id });
 
-        // emits a 'room:joined' event back to the client 
+        // emits a 'room:joined' event back to the client
         // that just joined the room.
         io.to(socket.id).emit("room:join", data);
     });
@@ -51,10 +51,6 @@ io.on("connection", (socket) => {
 
     socket.on("peer:nego:done", ({ to, ans }) => {
         io.to(to).emit("peer:nego:final", { from: socket.id, ans });
-    });
-
-    socket.on("call:end", ({ to }) => {
-        io.to(to).emit("call:end", { from: socket.id });
     });
 
     socket.on("call:initiated", ({ to }) => {
