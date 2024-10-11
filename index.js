@@ -48,15 +48,7 @@ io.on("connection", (socket) => {
         io.to(to).emit("call:accepted", { from: socket.id, ans });
     });
 
-    socket.on("peer:nego:needed", ({ to, offer }) => {
-        console.log("peer:nego:needed", { from: socket.id, offer });
-        io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
-    });
 
-    socket.on("peer:nego:done", ({ to, ans }) => {
-        console.log("peer:nego:final", { from: socket.id, ans });
-        io.to(to).emit("peer:nego:final", { from: socket.id, ans });
-    });
 })
 
 server.listen(process.env.PORT, () => console.log(`Server has started.`));
